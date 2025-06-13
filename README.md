@@ -48,6 +48,8 @@ Untuk mencapai tujuan-tujuan di atas, berikut adalah solusi yang diusulkan:
 
 ## Data Understanding
 
+Tahap ini bertujuan untuk memahami dataset yang akan digunakan dalam proyek. Pemahaman yang mendalam tentang data menjadi fondasi penting sebelum melangkah ke tahap data preparation dan pemodelan.
+
 Dataset yang digunakan dalam proyek ini adalah "Analytics Industry Salaries 2022 India" yang diunduh dari Kaggle. Dataset ini berisi informasi tentang gaji profesional di industri analitik data di India pada tahun 2022. Dataset dapat diakses melalui tautan berikut: [Analytics Industry Salaries 2022 India](https://www.kaggle.com/datasets/iamsouravbanerjee/analytics-industry-salaries-2022-india).
 
 ### Variabel-variabel pada Analytics Industry Salaries 2022 India dataset adalah sebagai berikut:
@@ -63,36 +65,51 @@ Berikut adalah beberapa informasi tentang dataset:
 
 ![alt text](./assets/image-1.png)
 
+Berdasarkan pemeriksaan awal menggunakan df.info(), dataset ini memiliki:
+
+- 4339 baris  baris (entri data)
+- 6 kolom (fitur)
+
 ### Exploratory Data Analysis (EDA)
 
 #### Analisis Statistik Deskriptif
 
 ![alt text](./assets/image-2.png)
 
-<!-- Dari statistik deskriptif, kita dapat melihat bahwa:
-- Dataset memiliki 3755 entri.
-- Rata-rata jumlah laporan gaji adalah sekitar 47, dengan standar deviasi yang cukup tinggi (77.84).
-- Gaji rata-rata adalah sekitar 264,901 INR, dengan standar deviasi yang juga tinggi (217,681 INR).
-- Terdapat gaji terendah 0 INR yang kemungkinan merupakan data yang tidak valid.
-- Gaji tertinggi mencapai 3,010,000 INR. -->
-
 #### Analisis Missing Value dan Outlier
 
-Dalam dataset ini, terdapat beberapa nilai 0 yang perlu diperhatikan:
-- Terdapat nilai 0 pada kolom Salaries Reported dan Salary yang dapat mempengaruhi analisis.
-- Data dengan nilai 0 di kolom Salary telah dihapus untuk meningkatkan kualitas analisis.
+Dalam dataset ini, pada kolom Salaries Reported & Salary tidak terdapat missing value atau nilai 0.
+Ini berarti bahwa data sudah cukup bersih untuk dilakukan ke tahap selanjutnya.
 
-Selain itu, distribusi gaji terlihat sangat skewed ke kanan, sehingga transformasi logaritmik diterapkan untuk mendapatkan distribusi yang lebih normal:
-
-![Distribusi Salary - Sebelum](./assets/image-3.png)
-![Distribusi Salary - Setelah](./assets/image-4.png)
+- **Menangani Outlier**:
 
 Boxplot juga digunakan untuk mengidentifikasi outlier pada kolom Salary dan Salaries Reported:
 
 ![Boxplot Salary - Sebelum](./assets/image-5.png)
 ![Boxplot Salary - Setelah](./assets/image-6.png)
 
-Untuk menangani outlier, metode IQR (Interquartile Range) diterapkan dengan menggunakan persentil 10% dan 90% sebagai batas, yang lebih robust dibandingkan metode standar 25% dan 75% untuk dataset dengan skewness tinggi.
+Untuk menangani outlier, metode IQR (Interquartile Range) diterapkan dengan menggunakan persentil 10% dan 90% sebagai batas, yang lebih robust dibandingkan metode standar 25% dan 75% untuk dataset dengan skewness tinggi, menggunakan perintah dibawah ini.
+
+```python
+Q1 = df[numeric_col].quantile(0.10)
+Q3 = df[numeric_col].quantile(0.90)
+
+IQR = Q3-Q1
+df = df[~((df[numeric_col]<(Q1-2.0*IQR))|(df[numeric_col]>(Q3+2.0*IQR))).any(axis=1)]
+```
+
+- **Transformasi logaritmik pada kolom Salary**:
+
+Selain itu, distribusi gaji terlihat sangat skewed ke kanan, sehingga transformasi logaritmik diterapkan untuk mendapatkan distribusi yang lebih normal:
+
+![Distribusi Salary - Sebelum](./assets/image-3.png)
+![Distribusi Salary - Setelah](./assets/image-4.png)
+
+Untuk mengatasi distribusi Salary yang sangat skewed ke kanan, dilakukan transformasi logaritmik (log1p) untuk menghasilkan distribusi yang lebih mendekati normal. Transformasi ini penting karena banyak algoritma machine learning berasumsi bahwa data terdistribusi normal.
+
+```python
+df['Salary_Log'] = np.log1p(df['Salary'])  # log1p = log(1+x) untuk menghindari log(0)
+```
 
 #### Analisis Univariat
 
@@ -135,28 +152,7 @@ Analisis korelasi antara Salaries Reported dan Salary menunjukkan korelasi posit
 
 Persiapan data adalah langkah krusial dalam membangun model machine learning yang efektif. Pada proyek ini, dilakukan beberapa tahapan data preparation sebagai berikut:
 
-### 1. Penanganan Missing Value dan Outlier
-
-- **Penghapusan data dengan nilai Salary = 0**: Data dengan nilai gaji 0 dihapus karena dianggap tidak valid dan dapat mempengaruhi performa model.
-- **Penanganan outlier dengan metode IQR**: Outlier ditangani dengan menggunakan metode IQR yang dimodifikasi, menggunakan persentil 10% dan 90% dengan faktor pengali 2.0. Pendekatan ini dipilih untuk mempertahankan variabilitas alami dalam data gaji sambil menghilangkan nilai-nilai ekstrem yang dapat mempengaruhi model.
-
-```python
-Q1 = df[numeric_col].quantile(0.10)
-Q3 = df[numeric_col].quantile(0.90)
-
-IQR = Q3-Q1
-df = df[~((df[numeric_col]<(Q1-2.0*IQR))|(df[numeric_col]>(Q3+2.0*IQR))).any(axis=1)]
-```
-
-### 2. Transformasi Target Variable
-
-- **Transformasi logaritmik pada kolom Salary**: Untuk mengatasi distribusi Salary yang sangat skewed ke kanan, dilakukan transformasi logaritmik (log1p) untuk menghasilkan distribusi yang lebih mendekati normal. Transformasi ini penting karena banyak algoritma machine learning berasumsi bahwa data terdistribusi normal.
-
-```python
-df['Salary_Log'] = np.log1p(df['Salary'])  # log1p = log(1+x) untuk menghindari log(0)
-```
-
-### 3. Encoding Fitur Kategori
+### 1. Encoding Fitur Kategori
 
 - **Target Encoding untuk Company Name**: Metode target encoding diterapkan pada fitur Company Name untuk mengubah kategori menjadi nilai numerik berdasarkan rata-rata Salary untuk setiap perusahaan. Pendekatan ini dipilih karena jumlah kategori yang besar pada fitur Company Name.
 
@@ -178,7 +174,7 @@ df = pd.concat([df, pd.get_dummies(df['Job Title'], prefix='Job Title')],axis=1)
 df = pd.concat([df, pd.get_dummies(df['Location'], prefix='Location')],axis=1)
 ```
 
-### 4. Feature Engineering
+### 2. Feature Engineering
 
 - **Salary_per_Report**: Fitur baru dibuat dengan membagi Salary dengan Salaries Reported untuk menyediakan perspektif tambahan tentang hubungan antara jumlah laporan dan nilai gaji.
 
@@ -196,7 +192,7 @@ df['dimension'] = pca.transform(df[['Salaries Reported']]).flatten()
 df.drop(['Salaries Reported'], axis=1, inplace=True)
 ```
 
-### 5. Train-Test Split
+### 3. Train-Test Split
 
 Dataset dibagi menjadi data training (90%) dan data testing (10%) untuk memastikan evaluasi model yang objektif. Pemisahan dilakukan dengan stratifikasi untuk mempertahankan distribusi target variable.
 
@@ -211,7 +207,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1, rando
 _, _, y_log_train, y_log_test = train_test_split(X, y_log, test_size=0.1, random_state=123)
 ```
 
-### 6. Standarisasi
+### 4. Standarisasi
 
 Fitur numerik distandarisasi menggunakan StandardScaler untuk memastikan bahwa semua fitur berada pada skala yang sama. Standarisasi sangat penting untuk algoritma seperti KNN yang sensitif terhadap skala fitur.
 
@@ -411,6 +407,28 @@ Dari hasil evaluasi, dapat disimpulkan bahwa model Random Forest adalah pilihan 
 Performa yang baik dari model Random Forest dapat dikaitkan dengan karakteristiknya sebagai algoritma ensemble yang mampu menangkap hubungan kompleks dan non-linear antara fitur dan target variable. Selain itu, robustness Random Forest terhadap overfitting membuatnya menjadi pilihan yang solid untuk dataset yang relatif kecil seperti yang digunakan dalam proyek ini.
 
 Untuk aplikasi praktis, model ini dapat digunakan oleh profesional data, pencari kerja, dan departemen HR untuk memperkirakan gaji yang wajar berdasarkan perusahaan, jabatan, lokasi, dan jumlah laporan gaji yang tersedia.
+
+## Hubungan dengan Business Understanding
+
+Model prediksi gaji yang telah dikembangkan ini berhasil menjawab permasalahan bisnis yang telah diidentifikasi di awal.
+
+1) Apakah sudah menjawab setiap problem statement?
+
+- Ya. Model ini secara langsung menjawab kebutuhan akan transparansi gaji di pasar kerja. Dengan MAE sekitar $35,748, model dapat memberikan estimasi gaji yang cukup akurat sebagai titik awal negosiasi bagi pencari kerja dan acuan bagi perusahaan.
+
+2) Apakah berhasil mencapai setiap goals yang diharapkan?
+
+- Ya. Tujuan utama untuk membangun model prediktif telah tercapai. Model AdaBoost yang dihasilkan dapat digunakan sebagai alat bantu untuk:
+1. Pencari Kerja: Memiliki ekspektasi gaji yang realistis berdasarkan pengalaman, jabatan, dan lokasi.
+2. Perusahaan (HR): Menetapkan standar kompensasi yang kompetitif untuk menarik dan mempertahankan talenta.
+3. Profesional Data: Merencanakan jalur karir dengan lebih baik dengan memahami potensi pendapatan di berbagai peran.
+
+3) Apakah setiap solusi statement yang direncanakan berdampak?
+
+- Ya, solusi yang dihasilkan berdampak positif. Dampaknya dapat dijelaskan sebagai berikut:
+1. Untuk Transparansi Pasar Kerja: Seorang profesional data dapat memasukkan detail jabatannya ke dalam sistem berbasis model ini dan mendapatkan perkiraan gaji. Meskipun ada margin kesalahan (rata-rata $35,748), angka ini jauh lebih baik daripada tidak memiliki informasi sama sekali. Ini mengurangi asimetri informasi antara pemberi kerja dan calon karyawan.
+2. Untuk Strategi Rekrutmen: Tim HR dapat menggunakan model ini untuk memvalidasi rentang gaji yang mereka tawarkan. Jika tawaran mereka jauh di bawah prediksi model untuk kandidat dengan kualifikasi tertentu, mereka mungkin perlu menyesuaikannya agar tetap kompetitif di pasar.
+3. Untuk Perencanaan Karir: Seorang analis data junior dapat menggunakan model ini untuk memproyeksikan potensi gajinya jika ia beralih ke peran 'Data Scientist' atau mencapai level 'Senior', membantunya membuat keputusan investasi karir yang terinformasi.
 
 ## Referensi
 
