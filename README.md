@@ -81,35 +81,7 @@ Berdasarkan pemeriksaan awal menggunakan df.info(), dataset ini memiliki:
 Dalam dataset ini, pada kolom Salaries Reported & Salary tidak terdapat missing value atau nilai 0.
 Ini berarti bahwa data sudah cukup bersih untuk dilakukan ke tahap selanjutnya.
 
-- **Menangani Outlier**:
-
-Boxplot juga digunakan untuk mengidentifikasi outlier pada kolom Salary dan Salaries Reported:
-
-![Boxplot Salary - Sebelum](./assets/image-5.png)
-![Boxplot Salary - Setelah](./assets/image-6.png)
-
-Untuk menangani outlier, metode IQR (Interquartile Range) diterapkan dengan menggunakan persentil 10% dan 90% sebagai batas, yang lebih robust dibandingkan metode standar 25% dan 75% untuk dataset dengan skewness tinggi, menggunakan perintah dibawah ini.
-
-```python
-Q1 = df[numeric_col].quantile(0.10)
-Q3 = df[numeric_col].quantile(0.90)
-
-IQR = Q3-Q1
-df = df[~((df[numeric_col]<(Q1-2.0*IQR))|(df[numeric_col]>(Q3+2.0*IQR))).any(axis=1)]
-```
-
-- **Transformasi logaritmik pada kolom Salary**:
-
-Selain itu, distribusi gaji terlihat sangat skewed ke kanan, sehingga transformasi logaritmik diterapkan untuk mendapatkan distribusi yang lebih normal:
-
-![Distribusi Salary - Sebelum](./assets/image-3.png)
-![Distribusi Salary - Setelah](./assets/image-4.png)
-
-Untuk mengatasi distribusi Salary yang sangat skewed ke kanan, dilakukan transformasi logaritmik (log1p) untuk menghasilkan distribusi yang lebih mendekati normal. Transformasi ini penting karena banyak algoritma machine learning berasumsi bahwa data terdistribusi normal.
-
-```python
-df['Salary_Log'] = np.log1p(df['Salary'])  # log1p = log(1+x) untuk menghindari log(0)
-```
+![alt text](./assets/iamge-20.png)
 
 #### Analisis Univariat
 
@@ -152,7 +124,50 @@ Analisis korelasi antara Salaries Reported dan Salary menunjukkan korelasi posit
 
 Persiapan data adalah langkah krusial dalam membangun model machine learning yang efektif. Pada proyek ini, dilakukan beberapa tahapan data preparation sebagai berikut:
 
-### 1. Encoding Fitur Kategori
+### 1. Menghapus Kolom yang tidak diperlukan
+
+```python 
+df = df.loc[(df[['Unnamed: 0']]!=0).all(axis=1)] 
+```
+Kode ini memilih hanya baris-baris di mana nilai pada kolom `'Unnamed: 0'` tidak sama dengan 0, dan menugaskan kembali hasilnya ke DataFrame `df`.
+
+![alt text](./assets/iamge-19.png)
+
+Setelah proses ini, satu baris data berhasil dihapus dari dataset asli, yang mengindikasikan bahwa hanya ada satu baris dengan nilai 0 di kolom `'Unnamed: 0'`. Dataset kini bebas dari baris-baris tersebut dan siap untuk analisis lebih lanjut. Ketika diperiksa menggunakan *df.shape()* maka baris berkurang satu menjadi (4338, 6).
+
+### 2. Menangani Outlier dan Transformasi Logaritmik
+
+- **Menangani Outlier**:
+
+Boxplot juga digunakan untuk mengidentifikasi outlier pada kolom Salary dan Salaries Reported:
+
+![Boxplot Salary - Sebelum](./assets/image-5.png)
+![Boxplot Salary - Setelah](./assets/image-6.png)
+
+Untuk menangani outlier, metode IQR (Interquartile Range) diterapkan dengan menggunakan persentil 10% dan 90% sebagai batas, yang lebih robust dibandingkan metode standar 25% dan 75% untuk dataset dengan skewness tinggi, menggunakan perintah dibawah ini.
+
+```python
+Q1 = df[numeric_col].quantile(0.10)
+Q3 = df[numeric_col].quantile(0.90)
+
+IQR = Q3-Q1
+df = df[~((df[numeric_col]<(Q1-2.0*IQR))|(df[numeric_col]>(Q3+2.0*IQR))).any(axis=1)]
+```
+
+- **Transformasi logaritmik pada kolom Salary**:
+
+Selain itu, distribusi gaji terlihat sangat skewed ke kanan, sehingga transformasi logaritmik diterapkan untuk mendapatkan distribusi yang lebih normal:
+
+![Distribusi Salary - Sebelum](./assets/image-3.png)
+![Distribusi Salary - Setelah](./assets/image-4.png)
+
+Untuk mengatasi distribusi Salary yang sangat skewed ke kanan, dilakukan transformasi logaritmik (log1p) untuk menghasilkan distribusi yang lebih mendekati normal. Transformasi ini penting karena banyak algoritma machine learning berasumsi bahwa data terdistribusi normal.
+
+```python
+df['Salary_Log'] = np.log1p(df['Salary'])  # log1p = log(1+x) untuk menghindari log(0)
+```
+
+### 3. Encoding Fitur Kategori
 
 - **Target Encoding untuk Company Name**: Metode target encoding diterapkan pada fitur Company Name untuk mengubah kategori menjadi nilai numerik berdasarkan rata-rata Salary untuk setiap perusahaan. Pendekatan ini dipilih karena jumlah kategori yang besar pada fitur Company Name.
 
@@ -174,7 +189,7 @@ df = pd.concat([df, pd.get_dummies(df['Job Title'], prefix='Job Title')],axis=1)
 df = pd.concat([df, pd.get_dummies(df['Location'], prefix='Location')],axis=1)
 ```
 
-### 2. Feature Engineering
+### 4. Feature Engineering
 
 - **Salary_per_Report**: Fitur baru dibuat dengan membagi Salary dengan Salaries Reported untuk menyediakan perspektif tambahan tentang hubungan antara jumlah laporan dan nilai gaji.
 
@@ -192,7 +207,7 @@ df['dimension'] = pca.transform(df[['Salaries Reported']]).flatten()
 df.drop(['Salaries Reported'], axis=1, inplace=True)
 ```
 
-### 3. Train-Test Split
+### 5. Train-Test Split
 
 Dataset dibagi menjadi data training (90%) dan data testing (10%) untuk memastikan evaluasi model yang objektif. Pemisahan dilakukan dengan stratifikasi untuk mempertahankan distribusi target variable.
 
@@ -207,7 +222,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.1, rando
 _, _, y_log_train, y_log_test = train_test_split(X, y_log, test_size=0.1, random_state=123)
 ```
 
-### 4. Standarisasi
+### 6. Standarisasi
 
 Fitur numerik distandarisasi menggunakan StandardScaler untuk memastikan bahwa semua fitur berada pada skala yang sama. Standarisasi sangat penting untuk algoritma seperti KNN yang sensitif terhadap skala fitur.
 
