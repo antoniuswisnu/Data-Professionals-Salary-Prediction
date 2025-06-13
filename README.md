@@ -81,7 +81,7 @@ Berdasarkan pemeriksaan awal menggunakan df.info(), dataset ini memiliki:
 Dalam dataset ini, pada kolom Salaries Reported & Salary tidak terdapat missing value atau nilai 0.
 Ini berarti bahwa data sudah cukup bersih untuk dilakukan ke tahap selanjutnya.
 
-![alt text](./assets/iamge-20.png)
+![alt text](./assets/image-20.png)
 
 #### Analisis Univariat
 
@@ -131,7 +131,7 @@ df = df.loc[(df[['Unnamed: 0']]!=0).all(axis=1)]
 ```
 Kode ini memilih hanya baris-baris di mana nilai pada kolom `'Unnamed: 0'` tidak sama dengan 0, dan menugaskan kembali hasilnya ke DataFrame `df`.
 
-![alt text](./assets/iamge-19.png)
+![alt text](./assets/image-19.png)
 
 Setelah proses ini, satu baris data berhasil dihapus dari dataset asli, yang mengindikasikan bahwa hanya ada satu baris dengan nilai 0 di kolom `'Unnamed: 0'`. Dataset kini bebas dari baris-baris tersebut dan siap untuk analisis lebih lanjut. Ketika diperiksa menggunakan *df.shape()* maka baris berkurang satu menjadi (4338, 6).
 
